@@ -2,7 +2,10 @@
 // README at: https://github.com/devcontainers/templates/tree/main/src/postgres
 {
 	"name": "RagFlow",
-	"dockerComposeFile": "docker-compose.yml",
+	"dockerComposeFile": [
+		"../docker/docker-compose-base.yml",
+		"docker-compose.yml"
+	],
 	"service": "app",
 	"workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
 	"features": {
