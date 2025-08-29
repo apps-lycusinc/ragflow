@@ -9,6 +9,7 @@ pipx ensurepath
 pipx install uv
 pipx install pre-commit
 
+git config --unset-all core.hooksPath
 # Sync Python dependencies and run setup scripts
 uv sync --python 3.10 --all-extras
 uv run download_deps.py
