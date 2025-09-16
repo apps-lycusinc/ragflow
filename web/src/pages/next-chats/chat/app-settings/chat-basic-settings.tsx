@@ -1,6 +1,6 @@
 'use client';
 
-import { FileUploader } from '@/components/file-uploader';
+import { AvatarUpload } from '@/components/avatar-upload';
 import { KnowledgeBaseFormField } from '@/components/knowledge-base-item';
 import { MetadataFilter } from '@/components/metadata-filter';
 import { SwitchFormField } from '@/components/switch-fom-field';
@@ -14,24 +14,12 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useTranslate } from '@/hooks/common-hooks';
 import { useFormContext } from 'react-hook-form';
 
 export default function ChatBasicSetting() {
   const { t } = useTranslate('chat');
   const form = useFormContext();
-
-  const languageOptions = [
-    { value: 'English', label: 'English' },
-    { value: 'Chinese', label: 'Chinese' },
-    { value: 'Spanish', label: 'Spanish' },
-    { value: 'French', label: 'French' },
-    { value: 'German', label: 'German' },
-    { value: 'Japanese', label: 'Japanese' },
-    { value: 'Korean', label: 'Korean' },
-    { value: 'Vietnamese', label: 'Vietnamese' },
-  ];
 
   return (
     <div className="space-y-8">
@@ -43,11 +31,7 @@ export default function ChatBasicSetting() {
             <FormItem className="w-full">
               <FormLabel>{t('assistantAvatar')}</FormLabel>
               <FormControl>
-                <FileUploader
-                  value={field.value}
-                  onValueChange={field.onChange}
-                  maxFileCount={1}
-                />
+                <AvatarUpload {...field}></AvatarUpload>
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -59,34 +43,10 @@ export default function ChatBasicSetting() {
         name="name"
         render={({ field }) => (
           <FormItem>
-            <FormLabel>{t('assistantName')}</FormLabel>
+            <FormLabel required>{t('assistantName')}</FormLabel>
             <FormControl>
               <Input {...field}></Input>
             </FormControl>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
-      <FormField
-        control={form.control}
-        name="language"
-        render={({ field }) => (
-          <FormItem>
-            <FormLabel>{t('language')}</FormLabel>
-            <Select onValueChange={field.onChange} defaultValue={field.value}>
-              <FormControl>
-                <SelectTrigger>
-                  <SelectValue placeholder={t('common.languagePlaceholder')} />
-                </SelectTrigger>
-              </FormControl>
-              <SelectContent>
-                {languageOptions.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
             <FormMessage />
           </FormItem>
         )}
@@ -109,7 +69,9 @@ export default function ChatBasicSetting() {
         name={'prompt_config.empty_response'}
         render={({ field }) => (
           <FormItem>
-            <FormLabel>{t('emptyResponse')}</FormLabel>
+            <FormLabel tooltip={t('emptyResponseTip')}>
+              {t('emptyResponse')}
+            </FormLabel>
             <FormControl>
               <Textarea {...field}></Textarea>
             </FormControl>
@@ -122,7 +84,9 @@ export default function ChatBasicSetting() {
         name={'prompt_config.prologue'}
         render={({ field }) => (
           <FormItem>
-            <FormLabel>{t('setAnOpener')}</FormLabel>
+            <FormLabel tooltip={t('setAnOpenerTip')}>
+              {t('setAnOpener')}
+            </FormLabel>
             <FormControl>
               <Textarea {...field}></Textarea>
             </FormControl>
@@ -133,14 +97,17 @@ export default function ChatBasicSetting() {
       <SwitchFormField
         name={'prompt_config.quote'}
         label={t('quote')}
+        tooltip={t('quoteTip')}
       ></SwitchFormField>
       <SwitchFormField
         name={'prompt_config.keyword'}
         label={t('keyword')}
+        tooltip={t('keywordTip')}
       ></SwitchFormField>
       <SwitchFormField
         name={'prompt_config.tts'}
         label={t('tts')}
+        tooltip={t('ttsTip')}
       ></SwitchFormField>
       <TavilyFormField></TavilyFormField>
       <KnowledgeBaseFormField></KnowledgeBaseFormField>

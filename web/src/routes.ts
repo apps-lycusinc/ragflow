@@ -42,6 +42,11 @@ export enum Routes {
   AgentShare = '/agent/share',
   ChatShare = `${Chats}/share`,
   UserSetting = '/user-setting',
+  DataFlows = '/data-flows',
+  DataFlow = '/data-flow',
+  DataSetOverview = '/dataset-overview',
+  DataSetSetting = '/dataset-setting',
+  DataflowResult = '/dataflow-result',
 }
 
 const routes = [
@@ -151,6 +156,7 @@ const routes = [
     path: Routes.Root,
     layout: false,
     component: '@/layouts/next',
+    wrappers: ['@/wrappers/auth'],
     routes: [
       {
         path: Routes.Root,
@@ -270,7 +276,20 @@ const routes = [
         path: `${Routes.DatasetBase}${Routes.KnowledgeGraph}/:id`,
         component: `@/pages${Routes.DatasetBase}${Routes.KnowledgeGraph}`,
       },
+      {
+        path: `${Routes.DatasetBase}${Routes.DataSetOverview}/:id`,
+        component: `@/pages${Routes.DatasetBase}${Routes.DataSetOverview}`,
+      },
+      {
+        path: `${Routes.DatasetBase}${Routes.DataSetSetting}/:id`,
+        component: `@/pages${Routes.DatasetBase}${Routes.DataSetSetting}`,
+      },
     ],
+  },
+  {
+    path: `${Routes.DataflowResult}/:id`,
+    layout: false,
+    component: `@/pages${Routes.DataflowResult}`,
   },
   {
     path: `${Routes.ParsedResult}/chunks`,
@@ -381,6 +400,22 @@ const routes = [
         component: `@/pages${Routes.ProfileMcp}`,
       },
     ],
+  },
+  {
+    path: Routes.DataFlows,
+    layout: false,
+    component: '@/layouts/next',
+    routes: [
+      {
+        path: Routes.DataFlows,
+        component: `@/pages${Routes.DataFlows}`,
+      },
+    ],
+  },
+  {
+    path: `${Routes.DataFlow}/:id`,
+    layout: false,
+    component: `@/pages${Routes.DataFlow}`,
   },
 ];
 
