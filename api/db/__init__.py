@@ -29,15 +29,15 @@ class ActiveEnum(Enum):
 
 
 class UserTenantRole(StrEnum):
-    OWNER = 'owner'
-    ADMIN = 'admin'
-    NORMAL = 'normal'
-    INVITE = 'invite'
+    OWNER = "owner"
+    ADMIN = "admin"
+    NORMAL = "normal"
+    INVITE = "invite"
 
 
 class TenantPermission(StrEnum):
-    ME = 'me'
-    TEAM = 'team'
+    ME = "me"
+    TEAM = "team"
 
 
 class SerializedType(IntEnum):
@@ -46,30 +46,40 @@ class SerializedType(IntEnum):
 
 
 class FileType(StrEnum):
-    PDF = 'pdf'
-    DOC = 'doc'
-    VISUAL = 'visual'
-    AURAL = 'aural'
-    VIRTUAL = 'virtual'
-    FOLDER = 'folder'
+    PDF = "pdf"
+    DOC = "doc"
+    VISUAL = "visual"
+    AURAL = "aural"
+    VIRTUAL = "virtual"
+    FOLDER = "folder"
     OTHER = "other"
 
-VALID_FILE_TYPES = {FileType.PDF, FileType.DOC, FileType.VISUAL, FileType.AURAL, FileType.VIRTUAL, FileType.FOLDER, FileType.OTHER}
+
+VALID_FILE_TYPES = {
+    FileType.PDF,
+    FileType.DOC,
+    FileType.VISUAL,
+    FileType.AURAL,
+    FileType.VIRTUAL,
+    FileType.FOLDER,
+    FileType.OTHER,
+}
+
 
 class LLMType(StrEnum):
-    CHAT = 'chat'
-    EMBEDDING = 'embedding'
-    SPEECH2TEXT = 'speech2text'
-    IMAGE2TEXT = 'image2text'
-    RERANK = 'rerank'
-    TTS    = 'tts'
+    CHAT = "chat"
+    EMBEDDING = "embedding"
+    SPEECH2TEXT = "speech2text"
+    IMAGE2TEXT = "image2text"
+    RERANK = "rerank"
+    TTS = "tts"
 
 
 class ChatStyle(StrEnum):
-    CREATIVE = 'Creative'
-    PRECISE = 'Precise'
-    EVENLY = 'Evenly'
-    CUSTOM = 'Custom'
+    CREATIVE = "Creative"
+    PRECISE = "Precise"
+    EVENLY = "Evenly"
+    CUSTOM = "Custom"
 
 
 class TaskStatus(StrEnum):
@@ -80,7 +90,13 @@ class TaskStatus(StrEnum):
     FAIL = "4"
 
 
-VALID_TASK_STATUS     = {TaskStatus.UNSTART, TaskStatus.RUNNING, TaskStatus.CANCEL, TaskStatus.DONE, TaskStatus.FAIL}
+VALID_TASK_STATUS = {
+    TaskStatus.UNSTART,
+    TaskStatus.RUNNING,
+    TaskStatus.CANCEL,
+    TaskStatus.DONE,
+    TaskStatus.FAIL,
+}
 
 
 class ParserType(StrEnum):
@@ -99,6 +115,7 @@ class ParserType(StrEnum):
     EMAIL = "email"
     KG = "knowledge_graph"
     TAG = "tag"
+    DOCLING = "docling"
 
 
 class FileSource(StrEnum):
@@ -116,6 +133,7 @@ class CanvasCategory(StrEnum):
     Agent = "agent_canvas"
     DataFlow = "dataflow_canvas"
 
+
 VALID_CANVAS_CATEGORIES = {CanvasCategory.Agent, CanvasCategory.DataFlow}
 
 
@@ -127,4 +145,4 @@ class MCPServerType(StrEnum):
 VALID_MCP_SERVER_TYPES = {MCPServerType.SSE, MCPServerType.STREAMABLE_HTTP}
 
 
-KNOWLEDGEBASE_FOLDER_NAME=".knowledgebase"
+KNOWLEDGEBASE_FOLDER_NAME = ".knowledgebase"
