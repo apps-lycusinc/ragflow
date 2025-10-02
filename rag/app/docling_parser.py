@@ -40,13 +40,9 @@ class DoclingPdfParser:
 
         except ImportError as e:
             logging.error(f"DocLing not installed: {e}")
-            raise ImportError(
-                "DocLing is required for this parser. Install with: pip install docling"
-            )
+            raise ImportError("DocLing is required for this parser. Install with: pip install docling")
 
-    def __call__(
-        self, filename, binary=None, from_page=0, to_page=100000, callback=None
-    ):
+    def __call__(self, filename, binary=None, from_page=0, to_page=100000, callback=None):
         """Parse PDF using DocLing"""
         if callback:
             callback(0.1, "Starting DocLing PDF parsing...")
@@ -58,13 +54,7 @@ class DoclingPdfParser:
             pipeline_options.do_table_structure = True  # Enable table extraction
 
             # Create converter with PDF-specific options
-            doc_converter = self.DocumentConverter(
-                format_options={
-                    self.InputFormat.PDF: self.PdfFormatOption(
-                        pipeline_options=pipeline_options
-                    )
-                }
-            )
+            doc_converter = self.DocumentConverter(format_options={self.InputFormat.PDF: self.PdfFormatOption(pipeline_options=pipeline_options)})
 
             if callback:
                 callback(0.3, "Converting document with DocLing...")
@@ -124,9 +114,7 @@ class DoclingPdfParser:
 
                 # Add page content to sections
                 if page_text.strip():
-                    sections.append(
-                        (page_text.strip(), {"page_number": page_num + 1, "bbox": None})
-                    )
+                    sections.append((page_text.strip(), {"page_number": page_num + 1, "bbox": None}))
 
                 # Add tables
                 tables.extend(page_tables)
@@ -158,9 +146,7 @@ def chunk(
     """
 
     is_english = lang.lower() == "english"
-    parser_config = kwargs.get(
-        "parser_config", {"chunk_token_num": 512, "delimiter": "\n!?。；！？"}
-    )
+    parser_config = kwargs.get("parser_config", {"chunk_token_num": 512, "delimiter": "\n!?。；！？"})
 
     doc = {
         "docnm_kwd": filename,

@@ -132,9 +132,7 @@ FAILED_TASKS = 0
 CURRENT_TASKS = {}
 
 MAX_CONCURRENT_TASKS = int(os.environ.get("MAX_CONCURRENT_TASKS", "5"))
-MAX_CONCURRENT_CHUNK_BUILDERS = int(
-    os.environ.get("MAX_CONCURRENT_CHUNK_BUILDERS", "1")
-)
+MAX_CONCURRENT_CHUNK_BUILDERS = int(os.environ.get("MAX_CONCURRENT_CHUNK_BUILDERS", "1"))
 MAX_CONCURRENT_MINIO = int(os.environ.get("MAX_CONCURRENT_MINIO", "10"))
 task_limiter = trio.Semaphore(MAX_CONCURRENT_TASKS)
 chunk_limiter = trio.CapacityLimiter(MAX_CONCURRENT_CHUNK_BUILDERS)
@@ -182,9 +180,7 @@ def start_tracemalloc_and_snapshot(signum, frame):
         import resource
 
         max_rss = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
-    logging.info(
-        f"taken snapshot {snapshot_file}. max RSS={max_rss / 1000:.2f} MB, current memory usage: {current / 10**6:.2f} MB, Peak memory usage: {peak / 10**6:.2f} MB"
-    )
+    logging.info(f"taken snapshot {snapshot_file}. max RSS={max_rss / 1000:.2f} MB, current memory usage: {current / 10**6:.2f} MB, Peak memory usage: {peak / 10**6:.2f} MB")
 
 
 # SIGUSR2 handler: stop tracemalloc
@@ -230,9 +226,7 @@ def set_progress(task_id, from_page=0, to_page=-1, prog=None, msg="Processing...
     except DoesNotExist:
         logging.warning(f"set_progress({task_id}) got exception DoesNotExist")
     except Exception:
-        logging.exception(
-            f"set_progress({task_id}), progress: {prog}, progress_msg: {msg}, got exception"
-        )
+        logging.exception(f"set_progress({task_id}), progress: {prog}, progress_msg: {msg}, got exception")
 
 
 async def collect():
@@ -242,16 +236,12 @@ async def collect():
     svr_queue_names = get_svr_queue_names()
     try:
         if not UNACKED_ITERATOR:
-            UNACKED_ITERATOR = REDIS_CONN.get_unacked_iterator(
-                svr_queue_names, SVR_CONSUMER_GROUP_NAME, CONSUMER_NAME
-            )
+            UNACKED_ITERATOR = REDIS_CONN.get_unacked_iterator(svr_queue_names, SVR_CONSUMER_GROUP_NAME, CONSUMER_NAME)
         try:
             redis_msg = next(UNACKED_ITERATOR)
         except StopIteration:
             for svr_queue_name in svr_queue_names:
-                redis_msg = REDIS_CONN.queue_consumer(
-                    svr_queue_name, SVR_CONSUMER_GROUP_NAME, CONSUMER_NAME
-                )
+                redis_msg = REDIS_CONN.queue_consumer(svr_queue_name, SVR_CONSUMER_GROUP_NAME, CONSUMER_NAME)
                 if redis_msg:
                     break
     except Exception:
@@ -306,32 +296,23 @@ async def build_chunks(task, progress_callback):
         st = timer()
         bucket, name = File2DocumentService.get_storage_address(doc_id=task["doc_id"])
         binary = await get_storage_binary(bucket, name)
-        logging.info(
-            "From minio({}) {}/{}".format(timer() - st, task["location"], task["name"])
-        )
+        logging.info("From minio({}) {}/{}".format(timer() - st, task["location"], task["name"]))
     except TimeoutError:
         progress_callback(
             -1,
             "Internal server error: Fetch file from minio timeout. Could you try it again.",
         )
-        logging.exception(
-            "Minio {}/{} got timeout: Fetch file from minio timeout.".format(
-                task["location"], task["name"]
-            )
-        )
+        logging.exception("Minio {}/{} got timeout: Fetch file from minio timeout.".format(task["location"], task["name"]))
         raise
     except Exception as e:
         if re.search("(No such file|not found)", str(e)):
             progress_callback(
                 -1,
-                "Can not find file <%s> from minio. Could you try it again?"
-                % task["name"],
+                "Can not find file <%s> from minio. Could you try it again?" % task["name"],
             )
         else:
             progress_callback(-1, "Get file from minio: %s" % str(e).replace("'", ""))
-        logging.exception(
-            "Chunking {}/{} got exception".format(task["location"], task["name"])
-        )
+        logging.exception("Chunking {}/{} got exception".format(task["location"], task["name"]))
         raise
 
     try:
@@ -349,20 +330,12 @@ async def build_chunks(task, progress_callback):
                     tenant_id=task["tenant_id"],
                 )
             )
-        logging.info(
-            "Chunking({}) {}/{} done".format(
-                timer() - st, task["location"], task["name"]
-            )
-        )
+        logging.info("Chunking({}) {}/{} done".format(timer() - st, task["location"], task["name"]))
     except TaskCanceledException:
         raise
     except Exception as e:
-        progress_callback(
-            -1, "Internal server error while chunking: %s" % str(e).replace("'", "")
-        )
-        logging.exception(
-            "Chunking {}/{} got exception".format(task["location"], task["name"])
-        )
+        progress_callback(-1, "Internal server error while chunking: %s" % str(e).replace("'", ""))
+        logging.exception("Chunking {}/{} got exception".format(task["location"], task["name"]))
         raise
 
     docs = []
@@ -376,11 +349,7 @@ async def build_chunks(task, progress_callback):
         try:
             d = copy.deepcopy(document)
             d.update(chunk)
-            d["id"] = xxhash.xxh64(
-                (chunk["content_with_weight"] + str(d["doc_id"])).encode(
-                    "utf-8", "surrogatepass"
-                )
-            ).hexdigest()
+            d["id"] = xxhash.xxh64((chunk["content_with_weight"] + str(d["doc_id"])).encode("utf-8", "surrogatepass")).hexdigest()
             d["create_time"] = str(datetime.now()).replace("T", " ")[:19]
             d["create_timestamp_flt"] = datetime.now().timestamp()
             if not d.get("image"):
@@ -402,29 +371,17 @@ async def build_chunks(task, progress_callback):
                     try:
                         d["image"].save(output_buffer, format="JPEG")
                     except OSError as e:
-                        logging.warning(
-                            "Saving image of chunk {}/{}/{} got exception, ignore: {}".format(
-                                task["location"], task["name"], d["id"], str(e)
-                            )
-                        )
+                        logging.warning("Saving image of chunk {}/{}/{} got exception, ignore: {}".format(task["location"], task["name"], d["id"], str(e)))
 
                 async with minio_limiter:
-                    await trio.to_thread.run_sync(
-                        lambda: STORAGE_IMPL.put(
-                            task["kb_id"], d["id"], output_buffer.getvalue()
-                        )
-                    )
+                    await trio.to_thread.run_sync(lambda: STORAGE_IMPL.put(task["kb_id"], d["id"], output_buffer.getvalue()))
                 d["img_id"] = "{}-{}".format(task["kb_id"], d["id"])
                 if not isinstance(d["image"], bytes):
                     d["image"].close()
                 del d["image"]  # Remove image reference
                 docs.append(d)
         except Exception:
-            logging.exception(
-                "Saving image of chunk {}/{}/{} got exception".format(
-                    task["location"], task["name"], d["id"]
-                )
-            )
+            logging.exception("Saving image of chunk {}/{}/{} got exception".format(task["location"], task["name"], d["id"]))
             raise
 
     async with trio.open_nursery() as nursery:
@@ -445,16 +402,10 @@ async def build_chunks(task, progress_callback):
         )
 
         async def doc_keyword_extraction(chat_mdl, d, topn):
-            cached = get_llm_cache(
-                chat_mdl.llm_name, d["content_with_weight"], "keywords", {"topn": topn}
-            )
+            cached = get_llm_cache(chat_mdl.llm_name, d["content_with_weight"], "keywords", {"topn": topn})
             if not cached:
                 async with chat_limiter:
-                    cached = await trio.to_thread.run_sync(
-                        lambda: keyword_extraction(
-                            chat_mdl, d["content_with_weight"], topn
-                        )
-                    )
+                    cached = await trio.to_thread.run_sync(lambda: keyword_extraction(chat_mdl, d["content_with_weight"], topn))
                 set_llm_cache(
                     chat_mdl.llm_name,
                     d["content_with_weight"],
@@ -464,9 +415,7 @@ async def build_chunks(task, progress_callback):
                 )
             if cached:
                 d["important_kwd"] = cached.split(",")
-                d["important_tks"] = rag_tokenizer.tokenize(
-                    " ".join(d["important_kwd"])
-                )
+                d["important_tks"] = rag_tokenizer.tokenize(" ".join(d["important_kwd"]))
             return
 
         async with trio.open_nursery() as nursery:
@@ -477,11 +426,7 @@ async def build_chunks(task, progress_callback):
                     d,
                     task["parser_config"]["auto_keywords"],
                 )
-        progress_callback(
-            msg="Keywords generation {} chunks completed in {:.2f}s".format(
-                len(docs), timer() - st
-            )
-        )
+        progress_callback(msg="Keywords generation {} chunks completed in {:.2f}s".format(len(docs), timer() - st))
 
     if task["parser_config"].get("auto_questions", 0):
         st = timer()
@@ -494,16 +439,10 @@ async def build_chunks(task, progress_callback):
         )
 
         async def doc_question_proposal(chat_mdl, d, topn):
-            cached = get_llm_cache(
-                chat_mdl.llm_name, d["content_with_weight"], "question", {"topn": topn}
-            )
+            cached = get_llm_cache(chat_mdl.llm_name, d["content_with_weight"], "question", {"topn": topn})
             if not cached:
                 async with chat_limiter:
-                    cached = await trio.to_thread.run_sync(
-                        lambda: question_proposal(
-                            chat_mdl, d["content_with_weight"], topn
-                        )
-                    )
+                    cached = await trio.to_thread.run_sync(lambda: question_proposal(chat_mdl, d["content_with_weight"], topn))
                 set_llm_cache(
                     chat_mdl.llm_name,
                     d["content_with_weight"],
@@ -523,11 +462,7 @@ async def build_chunks(task, progress_callback):
                     d,
                     task["parser_config"]["auto_questions"],
                 )
-        progress_callback(
-            msg="Question generation {} chunks completed in {:.2f}s".format(
-                len(docs), timer() - st
-            )
-        )
+        progress_callback(msg="Question generation {} chunks completed in {:.2f}s".format(len(docs), timer() - st))
 
     if task["kb_parser_config"].get("tag_kb_ids", []):
         progress_callback(msg="Start to tag for every chunk ...")
@@ -557,15 +492,8 @@ async def build_chunks(task, progress_callback):
             if task_canceled:
                 progress_callback(-1, msg="Task has been canceled.")
                 return
-            if (
-                settings.retrievaler.tag_content(
-                    tenant_id, kb_ids, d, all_tags, topn_tags=topn_tags, S=S
-                )
-                and len(d[TAG_FLD]) > 0
-            ):
-                examples.append(
-                    {"content": d["content_with_weight"], TAG_FLD: d[TAG_FLD]}
-                )
+            if settings.retrievaler.tag_content(tenant_id, kb_ids, d, all_tags, topn_tags=topn_tags, S=S) and len(d[TAG_FLD]) > 0:
+                examples.append({"content": d["content_with_weight"], TAG_FLD: d[TAG_FLD]})
             else:
                 docs_to_tag.append(d)
 
@@ -577,13 +505,9 @@ async def build_chunks(task, progress_callback):
                 {"topn": topn_tags},
             )
             if not cached:
-                picked_examples = (
-                    random.choices(examples, k=2) if len(examples) > 2 else examples
-                )
+                picked_examples = random.choices(examples, k=2) if len(examples) > 2 else examples
                 if not picked_examples:
-                    picked_examples.append(
-                        {"content": "This is an example", TAG_FLD: {"example": 1}}
-                    )
+                    picked_examples.append({"content": "This is an example", TAG_FLD: {"example": 1}})
                 async with chat_limiter:
                     cached = await trio.to_thread.run_sync(
                         lambda: content_tagging(
@@ -609,9 +533,7 @@ async def build_chunks(task, progress_callback):
         async with trio.open_nursery() as nursery:
             for d in docs_to_tag:
                 nursery.start_soon(doc_content_tagging, chat_mdl, d, topn_tags)
-        progress_callback(
-            msg="Tagging {} chunks completed in {:.2f}s".format(len(docs), timer() - st)
-        )
+        progress_callback(msg="Tagging {} chunks completed in {:.2f}s".format(len(docs), timer() - st))
 
     return docs
 
@@ -649,9 +571,7 @@ async def embedding(docs, mdl, parser_config=None, callback=None):
     cnts_ = np.array([])
     for i in range(0, len(cnts), EMBEDDING_BATCH_SIZE):
         async with embed_limiter:
-            vts, c = await trio.to_thread.run_sync(
-                lambda: batch_encode(cnts[i : i + EMBEDDING_BATCH_SIZE])
-            )
+            vts, c = await trio.to_thread.run_sync(lambda: batch_encode(cnts[i : i + EMBEDDING_BATCH_SIZE]))
         if len(cnts_) == 0:
             cnts_ = vts
         else:
@@ -659,9 +579,7 @@ async def embedding(docs, mdl, parser_config=None, callback=None):
         tk_count += c
         callback(prog=0.7 + 0.2 * (i + 1) / len(cnts), msg="")
     cnts = cnts_
-    filename_embd_weight = parser_config.get(
-        "filename_embd_weight", 0.1
-    )  # due to the db support none value
+    filename_embd_weight = parser_config.get("filename_embd_weight", 0.1)  # due to the db support none value
     if not filename_embd_weight:
         filename_embd_weight = 0.1
     title_w = float(filename_embd_weight)
@@ -676,14 +594,10 @@ async def embedding(docs, mdl, parser_config=None, callback=None):
     return tk_count, vector_size
 
 
-async def run_dataflow(
-    dsl: str, tenant_id: str, doc_id: str, task_id: str, flow_id: str, callback=None
-):
+async def run_dataflow(dsl: str, tenant_id: str, doc_id: str, task_id: str, flow_id: str, callback=None):
     _ = callback
 
-    pipeline = Pipeline(
-        dsl=dsl, tenant_id=tenant_id, doc_id=doc_id, task_id=task_id, flow_id=flow_id
-    )
+    pipeline = Pipeline(dsl=dsl, tenant_id=tenant_id, doc_id=doc_id, task_id=task_id, flow_id=flow_id)
     pipeline.reset()
 
     await pipeline.run()
@@ -710,9 +624,7 @@ async def run_raptor(row, chat_mdl, embd_mdl, vector_size, callback=None):
         row["parser_config"]["raptor"]["threshold"],
     )
     original_length = len(chunks)
-    chunks = await raptor(
-        chunks, row["parser_config"]["raptor"]["random_seed"], callback
-    )
+    chunks = await raptor(chunks, row["parser_config"]["raptor"]["random_seed"], callback)
     doc = {
         "doc_id": row["doc_id"],
         "kb_id": [str(row["kb_id"])],
@@ -800,14 +712,10 @@ async def do_handle_task(task):
         return
     elif task_type == "raptor":
         # bind LLM for raptor
-        chat_model = LLMBundle(
-            task_tenant_id, LLMType.CHAT, llm_name=task_llm_id, lang=task_language
-        )
+        chat_model = LLMBundle(task_tenant_id, LLMType.CHAT, llm_name=task_llm_id, lang=task_language)
         # run RAPTOR
         async with kg_limiter:
-            chunks, token_count = await run_raptor(
-                task, chat_model, embedding_model, vector_size, progress_callback
-            )
+            chunks, token_count = await run_raptor(task, chat_model, embedding_model, vector_size, progress_callback)
     # Either using graphrag or Standard chunking methods
     elif task_type == "graphrag":
         if not task_parser_config.get("graphrag", {}).get("use_graphrag", False):
@@ -815,9 +723,7 @@ async def do_handle_task(task):
             return
         graphrag_conf = task["kb_parser_config"].get("graphrag", {})
         start_ts = timer()
-        chat_model = LLMBundle(
-            task_tenant_id, LLMType.CHAT, llm_name=task_llm_id, lang=task_language
-        )
+        chat_model = LLMBundle(task_tenant_id, LLMType.CHAT, llm_name=task_llm_id, lang=task_language)
         with_resolution = graphrag_conf.get("resolution", False)
         with_community = graphrag_conf.get("community", False)
         async with kg_limiter:
@@ -830,17 +736,13 @@ async def do_handle_task(task):
                 embedding_model,
                 progress_callback,
             )
-        progress_callback(
-            prog=1.0, msg="Knowledge Graph done ({:.2f}s)".format(timer() - start_ts)
-        )
+        progress_callback(prog=1.0, msg="Knowledge Graph done ({:.2f}s)".format(timer() - start_ts))
         return
     else:
         # Standard chunking methods
         start_ts = timer()
         chunks = await build_chunks(task, progress_callback)
-        logging.info(
-            "Build document {}: {:.2f}s".format(task_document_name, timer() - start_ts)
-        )
+        logging.info("Build document {}: {:.2f}s".format(task_document_name, timer() - start_ts))
         if not chunks:
             progress_callback(1.0, msg=f"No chunk built from {task_document_name}")
             return
@@ -849,9 +751,7 @@ async def do_handle_task(task):
         progress_callback(msg="Generate {} chunks".format(len(chunks)))
         start_ts = timer()
         try:
-            token_count, vector_size = await embedding(
-                chunks, embedding_model, task_parser_config, progress_callback
-            )
+            token_count, vector_size = await embedding(chunks, embedding_model, task_parser_config, progress_callback)
         except Exception as e:
             error_message = "Generate embedding error:{}".format(str(e))
             progress_callback(-1, error_message)
@@ -871,11 +771,7 @@ async def do_handle_task(task):
             async with minio_limiter:
                 STORAGE_IMPL.delete(kb_id, chunk_id)
         except Exception:
-            logging.exception(
-                "Deleting image of chunk {}/{}/{} got exception".format(
-                    task["location"], task["name"], chunk_id
-                )
-            )
+            logging.exception("Deleting image of chunk {}/{}/{} got exception".format(task["location"], task["name"], chunk_id))
             raise
 
     for b in range(0, len(chunks), DOC_BULK_SIZE):
@@ -901,9 +797,7 @@ async def do_handle_task(task):
         try:
             TaskService.update_chunk_ids(task["id"], chunk_ids_str)
         except DoesNotExist:
-            logging.warning(
-                f"do_handle_task update_chunk_ids failed since task {task['id']} is unknown."
-            )
+            logging.warning(f"do_handle_task update_chunk_ids failed since task {task['id']} is unknown.")
             doc_store_result = await trio.to_thread.run_sync(
                 lambda: settings.docStoreConn.delete(
                     {"id": chunk_ids},
@@ -914,9 +808,7 @@ async def do_handle_task(task):
             async with trio.open_nursery() as nursery:
                 for chunk_id in chunk_ids:
                     nursery.start_soon(delete_image, task_dataset_id, chunk_id)
-            progress_callback(
-                -1, msg=f"Chunk updates failed since task {task['id']} is unknown."
-            )
+            progress_callback(-1, msg=f"Chunk updates failed since task {task['id']} is unknown.")
             return
 
     logging.info(
@@ -929,17 +821,13 @@ async def do_handle_task(task):
         )
     )
 
-    DocumentService.increment_chunk_num(
-        task_doc_id, task_dataset_id, token_count, chunk_count, 0
-    )
+    DocumentService.increment_chunk_num(task_doc_id, task_dataset_id, token_count, chunk_count, 0)
 
     time_cost = timer() - start_ts
     task_time_cost = timer() - task_start_ts
     progress_callback(
         prog=1.0,
-        msg="Indexing done ({:.2f}s). Task done ({:.2f}s)".format(
-            time_cost, task_time_cost
-        ),
+        msg="Indexing done ({:.2f}s). Task done ({:.2f}s)".format(time_cost, task_time_cost),
     )
     logging.info(
         "Chunk doc({}), page({}-{}), chunks({}), token({}), elapsed:{:.2f}".format(
@@ -984,15 +872,11 @@ async def handle_task():
 async def report_status():
     global CONSUMER_NAME, BOOT_AT, PENDING_TASKS, LAG_TASKS, DONE_TASKS, FAILED_TASKS
     REDIS_CONN.sadd("TASKEXE", CONSUMER_NAME)
-    redis_lock = RedisDistributedLock(
-        "clean_task_executor", lock_value=CONSUMER_NAME, timeout=60
-    )
+    redis_lock = RedisDistributedLock("clean_task_executor", lock_value=CONSUMER_NAME, timeout=60)
     while True:
         try:
             now = datetime.now()
-            group_info = REDIS_CONN.queue_info(
-                get_svr_queue_name(0), SVR_CONSUMER_GROUP_NAME
-            )
+            group_info = REDIS_CONN.queue_info(get_svr_queue_name(0), SVR_CONSUMER_GROUP_NAME)
             if group_info is not None:
                 PENDING_TASKS = int(group_info.get("pending", 0))
                 LAG_TASKS = int(group_info.get("lag", 0))
