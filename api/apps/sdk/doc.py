@@ -36,7 +36,15 @@ from api.db.services.llm_service import LLMBundle
 from api.db.services.tenant_llm_service import TenantLLMService
 from api.db.services.task_service import TaskService, queue_tasks
 from api.db.services.dialog_service import meta_filter, convert_conditions
-from api.utils.api_utils import check_duplicate_ids, construct_json_result, get_error_data_result, get_parser_config, get_result, server_error_response, token_required
+from api.utils.api_utils import (
+    check_duplicate_ids,
+    construct_json_result,
+    get_error_data_result,
+    get_parser_config,
+    get_result,
+    server_error_response,
+    token_required,
+)
 from rag.app.qa import beAdoc, rmPrefix
 from rag.app.tag import label_question
 from rag.nlp import rag_tokenizer, search
@@ -133,7 +141,10 @@ def upload(dataset_id, tenant_id):
         if file_obj.filename == "":
             return get_result(message="No file selected!", code=settings.RetCode.ARGUMENT_ERROR)
         if len(file_obj.filename.encode("utf-8")) > FILE_NAME_LEN_LIMIT:
-            return get_result(message=f"File name must be {FILE_NAME_LEN_LIMIT} bytes or less.", code=settings.RetCode.ARGUMENT_ERROR)
+            return get_result(
+                message=f"File name must be {FILE_NAME_LEN_LIMIT} bytes or less.",
+                code=settings.RetCode.ARGUMENT_ERROR,
+            )
     """
     # total size
     total_size = 0
@@ -274,7 +285,22 @@ def update_doc(tenant_id, dataset_id, document_id):
     if "parser_config" in req:
         DocumentService.update_parser_config(doc.id, req["parser_config"])
     if "chunk_method" in req:
-        valid_chunk_method = {"naive", "manual", "qa", "table", "paper", "book", "laws", "presentation", "picture", "one", "knowledge_graph", "email", "tag"}
+        valid_chunk_method = {
+            "naive",
+            "manual",
+            "qa",
+            "table",
+            "paper",
+            "book",
+            "laws",
+            "presentation",
+            "picture",
+            "one",
+            "knowledge_graph",
+            "email",
+            "tag",
+            "docling",
+        }
         if req.get("chunk_method") not in valid_chunk_method:
             return get_error_data_result(f"`chunk_method` {req['chunk_method']} doesn't exist")
 
@@ -315,7 +341,12 @@ def update_doc(tenant_id, dataset_id, document_id):
                 if not DocumentService.update_by_id(doc.id, {"status": str(status)}):
                     return get_error_data_result(message="Database error (Document update)!")
 
-                settings.docStoreConn.update({"doc_id": doc.id}, {"available_int": status}, search.index_name(kb.tenant_id), doc.kb_id)
+                settings.docStoreConn.update(
+                    {"doc_id": doc.id},
+                    {"available_int": status},
+                    search.index_name(kb.tenant_id),
+                    doc.kb_id,
+                )
                 return get_result(data=True)
             except Exception as e:
                 return server_error_response(e)
@@ -663,7 +694,10 @@ def delete(tenant_id, dataset_id):
             errors += str(e)
 
     if not_found:
-        return get_result(message=f"Documents not found: {not_found}", code=settings.RetCode.DATA_ERROR)
+        return get_result(
+            message=f"Documents not found: {not_found}",
+            code=settings.RetCode.DATA_ERROR,
+        )
 
     if errors:
         return get_result(message=errors, code=settings.RetCode.SERVER_ERROR)
@@ -739,7 +773,13 @@ def parse(tenant_id, dataset_id):
             return get_error_data_result(message=f"You don't own the document {id}.")
         if 0.0 < doc[0].progress < 1.0:
             return get_error_data_result("Can't parse document that is currently being processed")
-        info = {"run": "1", "progress": 0, "progress_msg": "", "chunk_num": 0, "token_num": 0}
+        info = {
+            "run": "1",
+            "progress": 0,
+            "progress_msg": "",
+            "chunk_num": 0,
+            "token_num": 0,
+        }
         DocumentService.update_by_id(id, info)
         settings.docStoreConn.delete({"doc_id": id}, search.index_name(tenant_id), dataset_id)
         TaskService.filter_delete([Task.doc_id == id])
@@ -750,7 +790,10 @@ def parse(tenant_id, dataset_id):
         queue_tasks(doc, bucket, name, 0)
         success_count += 1
     if not_found:
-        return get_result(message=f"Documents not found: {not_found}", code=settings.RetCode.DATA_ERROR)
+        return get_result(
+            message=f"Documents not found: {not_found}",
+            code=settings.RetCode.DATA_ERROR,
+        )
     if duplicate_messages:
         if success_count > 0:
             return get_result(
@@ -956,7 +999,10 @@ def list_chunks(tenant_id, dataset_id, document_id):
     if req.get("id"):
         chunk = settings.docStoreConn.get(req.get("id"), search.index_name(tenant_id), [dataset_id])
         if not chunk:
-            return get_result(message=f"Chunk not found: {dataset_id}/{req.get('id')}", code=settings.RetCode.NOT_FOUND)
+            return get_result(
+                message=f"Chunk not found: {dataset_id}/{req.get('id')}",
+                code=settings.RetCode.NOT_FOUND,
+            )
         k = []
         for n in chunk.keys():
             if re.search(r"(_vec$|_sm_|_tks|_ltks)", n):
@@ -982,7 +1028,13 @@ def list_chunks(tenant_id, dataset_id, document_id):
         _ = Chunk(**final_chunk)
 
     elif settings.docStoreConn.indexExist(search.index_name(tenant_id), dataset_id):
-        sres = settings.retrievaler.search(query, search.index_name(tenant_id), [dataset_id], emb_mdl=None, highlight=True)
+        sres = settings.retrievaler.search(
+            query,
+            search.index_name(tenant_id),
+            [dataset_id],
+            emb_mdl=None,
+            highlight=True,
+        )
         res["total"] = sres.total
         for id in sres.ids:
             d = {
@@ -1103,7 +1155,12 @@ def add_chunk(tenant_id, dataset_id, document_id):
     d["doc_id"] = document_id
     embd_id = DocumentService.get_embd_id(document_id)
     embd_mdl = TenantLLMService.model_instance(tenant_id, LLMType.EMBEDDING.value, embd_id)
-    v, c = embd_mdl.encode([doc.name, req["content"] if not d["question_kwd"] else "\n".join(d["question_kwd"])])
+    v, c = embd_mdl.encode(
+        [
+            doc.name,
+            req["content"] if not d["question_kwd"] else "\n".join(d["question_kwd"]),
+        ]
+    )
     v = 0.1 * v[0] + 0.9 * v[1]
     d["q_%d_vec" % len(v)] = v.tolist()
     settings.docStoreConn.insert([d], search.index_name(tenant_id), dataset_id)
@@ -1297,7 +1354,12 @@ def update_chunk(tenant_id, dataset_id, document_id, chunk_id):
         q, a = rmPrefix(arr[0]), rmPrefix(arr[1])
         d = beAdoc(d, arr[0], arr[1], not any([rag_tokenizer.is_chinese(t) for t in q + a]))
 
-    v, c = embd_mdl.encode([doc.name, d["content_with_weight"] if not d.get("question_kwd") else "\n".join(d["question_kwd"])])
+    v, c = embd_mdl.encode(
+        [
+            doc.name,
+            (d["content_with_weight"] if not d.get("question_kwd") else "\n".join(d["question_kwd"])),
+        ]
+    )
     v = 0.1 * v[0] + 0.9 * v[1] if doc.parser_id != ParserType.QA else v[1]
     d["q_%d_vec" % len(v)] = v.tolist()
     settings.docStoreConn.update({"id": chunk_id}, d, search.index_name(tenant_id), dataset_id)
@@ -1462,7 +1524,13 @@ def retrieval_test(tenant_id):
             rank_feature=label_question(question, kbs),
         )
         if use_kg:
-            ck = settings.kg_retrievaler.retrieval(question, [k.tenant_id for k in kbs], kb_ids, embd_mdl, LLMBundle(kb.tenant_id, LLMType.CHAT))
+            ck = settings.kg_retrievaler.retrieval(
+                question,
+                [k.tenant_id for k in kbs],
+                kb_ids,
+                embd_mdl,
+                LLMBundle(kb.tenant_id, LLMType.CHAT),
+            )
             if ck["content_with_weight"]:
                 ranks["chunks"].insert(0, ck)
 
