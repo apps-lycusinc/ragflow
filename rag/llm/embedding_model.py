@@ -301,9 +301,7 @@ def _resolve_azure_credentials(key):
         key_obj = json.loads(key)
         if isinstance(key_obj, dict):
             return key_obj.get("api_key", ""), key_obj.get("api_version", "2024-02-01")
-        logging.warning(
-            "Azure credential payload parsed as JSON but is not an object; using raw api_key string"
-        )
+        logging.warning("Azure credential payload parsed as JSON but is not an object; using raw api_key string")
     except (json.JSONDecodeError, TypeError):
         logging.warning("Azure credential payload is not valid JSON; using raw api_key string")
     return key, "2024-02-01"
@@ -852,7 +850,9 @@ class OpenAI_APIEmbed(OpenAIEmbed):
         if not base_url:
             raise ValueError("url cannot be None")
         base_url = urljoin(base_url, "v1")
-        self.client = OpenAI(api_key=key, base_url=base_url)
+        # Newer OpenAI SDK rejects empty-string api_key; use a placeholder for
+        # local / OpenAI-compatible endpoints that don't require a real key.
+        self.client = OpenAI(api_key=key or "empty", base_url=base_url)
         self.model_name = model_name.split("___")[0]
 
 
