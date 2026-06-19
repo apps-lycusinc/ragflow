@@ -16,6 +16,7 @@
 
 import asyncio
 import io
+import os
 import re
 
 import numpy as np
@@ -54,8 +55,7 @@ def chunk(filename, binary, tenant_id, lang, callback=None, **kwargs):
             cv_model_config = get_tenant_default_model_by_type(tenant_id, LLMType.IMAGE2TEXT)
             cv_mdl = LLMBundle(tenant_id, model_config=cv_model_config, lang=lang)
             video_prompt = str(parser_config.get("video_prompt", "") or "")
-            ans = asyncio.run(
-                cv_mdl.async_chat(system="", history=[], gen_conf={}, video_bytes=binary, filename=filename, video_prompt=video_prompt))
+            ans = asyncio.run(cv_mdl.async_chat(system="", history=[], gen_conf={}, video_bytes=binary, filename=filename, video_prompt=video_prompt))
             callback(0.8, "CV LLM respond: %s ..." % ans[:32])
             ans += "\n" + ans
             tokenize(doc, ans, eng)
@@ -73,7 +73,14 @@ def chunk(filename, binary, tenant_id, lang, callback=None, **kwargs):
         bxs = ocr(np.array(img))
         txt = "\n".join([t[0] for _, t in bxs if t[0]])
         callback(0.4, "Finish OCR: (%s ...)" % txt[:12])
-        if (eng and len(txt.split()) > 32) or len(txt) > 32:
+
+        # Set PREFER_VISION_MODEL=1 to always use the CV LLM regardless of how
+        # much OCR text was found (e.g. passports, dense ID documents).
+        # When unset the original behaviour applies: skip VLM when OCR already
+        # produced enough text (> 32 chars / words).
+        prefer_vision = os.environ.get("PREFER_VISION_MODEL", "").lower() in ("1", "true", "yes")
+
+        if not prefer_vision and ((eng and len(txt.split()) > 32) or len(txt) > 32):
             tokenize(doc, txt, eng)
             callback(0.8, "OCR results is too long to use CV LLM.")
             return attach_media_context([doc], 0, image_ctx)
@@ -87,8 +94,13 @@ def chunk(filename, binary, tenant_id, lang, callback=None, **kwargs):
                 img_binary.seek(0)
                 ans = cv_mdl.describe(img_binary.read())
             callback(0.8, "CV LLM respond: %s ..." % ans[:32])
-            txt += "\n" + ans
-            tokenize(doc, txt, eng)
+            if prefer_vision:
+                # VLM output replaces OCR entirely; discard garbled/noisy OCR.
+                final_txt = ans if ans.strip() else txt
+            else:
+                # Original behaviour: append VLM description to short OCR text.
+                final_txt = txt + "\n" + ans
+            tokenize(doc, final_txt, eng)
             return attach_media_context([doc], 0, image_ctx)
         except Exception as e:
             callback(prog=-1, msg=str(e))
