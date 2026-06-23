@@ -268,6 +268,16 @@ def _normalize_completion_messages(req):
     return (messages, msg), None
 
 
+def _normalize_kb_ids(kb_ids):
+    if kb_ids is None:
+        return []
+    if isinstance(kb_ids, str):
+        return [item.strip() for item in kb_ids.split(",") if item.strip()]
+    if isinstance(kb_ids, list):
+        return [item for item in kb_ids if item]
+    return None
+
+
 async def _validate_llm_id(llm_id, tenant_id, llm_setting=None):
     if not llm_id:
         return None
@@ -1228,6 +1238,13 @@ async def session_completion(chat_id_in_arg=""):
                 raise LookupError("No default chat model for tenant.")
             dia.llm_id = tenant_info.llm_id
             merge_generation_config(dia, chat_model_config)
+
+        if "kb_ids" in req and req["kb_ids"]:
+            normalized_kb_ids = _normalize_kb_ids(req["kb_ids"])
+            if normalized_kb_ids is None:
+                return get_data_error_result(message="`kb_ids` must be a list or comma-separated string.")
+            dia.kb_ids = list(set((dia.kb_ids or []) + normalized_kb_ids))
+            req["kb_ids"] = dia.kb_ids
 
         legacy = _get_bool_request_flag(
             req,

@@ -2608,6 +2608,70 @@ def test_session_completion_merges_generation_params_for_existing_chat(monkeypat
 
 
 @pytest.mark.p2
+def test_session_completion_merges_request_kb_ids_with_dialog_kb_ids(monkeypatch):
+    module = _load_chat_api_module(monkeypatch)
+
+    captured = {}
+    dia = SimpleNamespace(
+        id="chat-1",
+        tenant_id="tenant-1",
+        llm_id="model",
+        llm_setting={},
+        prompt_config={"prologue": ""},
+        kb_ids=["kb-chat"],
+        top_n=6,
+        top_k=1024,
+        rerank_id="",
+        similarity_threshold=0.1,
+        vector_similarity_weight=0.3,
+        meta_data_filter=None,
+    )
+    conv = SimpleNamespace(
+        id="session-1",
+        dialog_id="chat-1",
+        message=[],
+        reference=[],
+        user_id="authenticated-user",
+        name="test",
+    )
+    conv.to_dict = lambda: {
+        "id": conv.id,
+        "dialog_id": conv.dialog_id,
+        "message": conv.message,
+        "reference": conv.reference,
+        "user_id": conv.user_id,
+        "name": conv.name,
+    }
+
+    async def _fake_async_chat(captured_dia, _messages, stream=True, **_kwargs):
+        captured["kb_ids"] = list(captured_dia.kb_ids)
+        yield {"answer": "ok", "reference": {}}
+
+    monkeypatch.setattr(module.DialogService, "get_by_id", lambda _dialog_id: (True, dia))
+    monkeypatch.setattr(module.ConversationService, "get_by_id", lambda _id: (True, conv))
+    monkeypatch.setattr(module.ConversationService, "update_by_id", lambda *_a, **_k: True, raising=False)
+    monkeypatch.setattr(module, "async_chat", _fake_async_chat)
+    monkeypatch.setattr(module, "structure_answer", lambda _conv, ans, _message_id, _session_id: ans)
+    monkeypatch.setattr(
+        module,
+        "get_request_json",
+        lambda: _AwaitableValue({
+            "chat_id": "chat-1",
+            "session_id": "session-1",
+            "stream": False,
+            "messages": [{"role": "user", "content": "latest question"}],
+            "kb_ids": "kb-request,kb-request",
+        }),
+    )
+
+    res = _run(inspect.unwrap(module.session_completion)())
+
+    assert res["code"] == 0, res
+    assert set(captured["kb_ids"]) == {"kb-chat", "kb-request"}
+    assert captured["kb_ids"].count("kb-request") == 1
+
+
+@pytest.mark.p2
 def test_session_completion_can_use_submitted_full_history(monkeypatch):
     """The UI opt-in flag should preserve the previous full-history request behavior."""
     module = _load_chat_api_module(monkeypatch)
