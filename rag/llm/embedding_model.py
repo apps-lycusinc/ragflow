@@ -261,11 +261,11 @@ class OpenAIEmbed(Base):
         return [d.embedding for d in _sorted_by_index(res.data)], total_token_count_from_response(res)
 
     def encode(self, texts: list):
-        # OpenAI requires batch size <=16; 8191 is the documented per-input token ceiling.
-        return self._batched_encode(texts, self._call, batch_size=16, truncate_to=8191)
+        # OpenAI requires batch size <=16; 8000 is a safe per-input token ceiling.
+        return self._batched_encode(texts, self._call, batch_size=16, truncate_to=8000)
 
     def encode_queries(self, text):
-        vectors, token_count = self._batched_encode([text], self._call, batch_size=16, truncate_to=8191)
+        vectors, token_count = self._batched_encode([text], self._call, batch_size=16, truncate_to=8000)
         return vectors[0], token_count
 
 

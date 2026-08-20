@@ -280,7 +280,12 @@ class CoHereRerank(Base):
         self.model_name = model_name.split("___")[0]
 
     def _compute_rank(self, query: str, texts: List) -> Tuple[np.ndarray, int]:
-        token_count = num_tokens_from_string(query) + sum([num_tokens_from_string(t) for t in texts])
+        query_tokens = num_tokens_from_string(query)
+        # Cohere models have an 8192 total token ceiling per request/document.
+        # Utilize a max token buffer of 8000 minus query tokens for maximum context while staying safe under 8192.
+        max_doc_tokens = max(500, 8000 - query_tokens)
+        texts = [truncate(t, max_doc_tokens) for t in texts]
+        token_count = query_tokens + sum([num_tokens_from_string(t) for t in texts])
         res = self.client.rerank(
             model=self.model_name,
             query=query,
