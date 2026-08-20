@@ -766,17 +766,20 @@ async def async_chat(dialog, messages, stream=True, **kwargs):
         kwargs["knowledge"] = "\n------\n" + knowledge_text
     gen_conf = dialog.llm_setting
 
+    prompt4citation = ""
+    if knowledges and (prompt_config.get("quote", True) and kwargs.get("quote", True)):
+        prompt4citation = citation_prompt()
+
     system_content = prompt_config["system"].format(**kwargs) + attachments_
     # If knowledge was retrieved but the template has no {knowledge}
     # placeholder, auto-append it so the LLM still sees the context.
     if knowledges and "{knowledge}" not in prompt_config.get("system", ""):
         system_content += kwargs["knowledge"]
+    system_content += prompt4citation
+
     msg = [{"role": "system", "content": system_content}]
-    prompt4citation = ""
-    if knowledges and (prompt_config.get("quote", True) and kwargs.get("quote", True)):
-        prompt4citation = citation_prompt()
     msg.extend([{"role": m["role"], "content": re.sub(r"##\d+\$\$", "", m["content"])} for m in messages if m["role"] != "system"])
-    used_token_count, msg = message_fit_in(msg, int(max_tokens * 0.95))
+    used_token_count, msg = message_fit_in(msg, int(max_tokens * 0.88))
     if llm_model_config["model_type"] == "chat" and image_attachments:
         convert_last_user_msg_to_multimodal(msg, image_attachments, factory)
     assert len(msg) >= 2, f"message_fit_in has bug: {msg}"
@@ -895,9 +898,9 @@ async def async_chat(dialog, messages, stream=True, **kwargs):
 
     if stream:
         if llm_model_config["model_type"] == "chat":
-            stream_iter = chat_mdl.async_chat_streamly_delta(prompt + prompt4citation, msg[1:], gen_conf)
+            stream_iter = chat_mdl.async_chat_streamly_delta(prompt, msg[1:], gen_conf)
         else:
-            stream_iter = chat_mdl.async_chat_streamly_delta(prompt + prompt4citation, msg[1:], gen_conf, images=image_files)
+            stream_iter = chat_mdl.async_chat_streamly_delta(prompt, msg[1:], gen_conf, images=image_files)
         last_state = None
         async for kind, value, state in _stream_with_think_delta(stream_iter):
             last_state = state
@@ -915,9 +918,9 @@ async def async_chat(dialog, messages, stream=True, **kwargs):
             yield final
     else:
         if llm_model_config["model_type"] == "chat":
-            answer = await chat_mdl.async_chat(prompt + prompt4citation, msg[1:], gen_conf)
+            answer = await chat_mdl.async_chat(prompt, msg[1:], gen_conf)
         else:
-            answer = await chat_mdl.async_chat(prompt + prompt4citation, msg[1:], gen_conf, images=image_files)
+            answer = await chat_mdl.async_chat(prompt, msg[1:], gen_conf, images=image_files)
         user_content = msg[-1].get("content", "[content not available]")
         logging.debug("User: {}|Assistant: {}".format(user_content, answer))
         res = await decorate_answer(answer)
